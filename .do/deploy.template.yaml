@@ -26,9 +26,6 @@ spec:
           value: openclaw
 
         # Feature flags
-        - key: ENABLE_NGROK
-          scope: RUN_TIME
-          value: "false"
         - key: TAILSCALE_ENABLE
           scope: RUN_TIME
           value: "false"
@@ -38,11 +35,6 @@ spec:
         - key: ENABLE_UI
           scope: RUN_TIME
           value: "false"
-
-        # ngrok config
-        - key: NGROK_AUTHTOKEN
-          scope: RUN_TIME
-          type: SECRET
 
         # Tailscale config
         - key: TS_AUTHKEY

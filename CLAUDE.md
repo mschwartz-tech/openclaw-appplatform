@@ -22,7 +22,7 @@ make test-all                  # Run all configs in example_configs/
 
 # Inside the container
 /command/s6-svc -r /run/service/openclaw      # Restart OpenClaw service
-/command/s6-svc -r /run/service/<name>        # Restart any service (ngrok, tailscale, etc.)
+/command/s6-svc -r /run/service/<name>        # Restart any service (tailscale, etc.)
 /command/s6-svstat /run/service/<name>        # Check service status
 ```
 
@@ -34,7 +34,7 @@ make test-all                  # Run all configs in example_configs/
 1. Init scripts (`rootfs/etc/cont-init.d/`) run in numeric order (00→99999)
 2. `20-setup-openclaw` builds `openclaw.json` from env vars and the default template (`rootfs/etc/openclaw/openclaw.default.json`)
 3. Services (`rootfs/etc/services.d/*/run`) start under s6 supervision
-4. Services that aren't enabled exit immediately (checked via env vars like `TAILSCALE_ENABLE`, `ENABLE_NGROK`, etc.)
+4. Services that aren't enabled exit immediately (checked via env vars like `TAILSCALE_ENABLE`, etc.)
 
 **Key runtime paths (inside container):**
 - `/data/.openclaw/openclaw.json` — generated gateway config (preserved across restarts if backup enabled)
@@ -65,6 +65,6 @@ Tests use a config-matrix approach. Each test configuration is an `.env` file in
 - **Use `openclaw` wrapper in console sessions** — The wrapper in `/usr/local/bin/openclaw` runs commands as the correct user with proper environment. Running the binary directly as root won't work.
 - **s6 commands not in PATH** — Use full paths: `/command/s6-svc`, `/command/s6-svok`, `/command/s6-svstat`
 - **Don't push-to-deploy for development** — Make changes inside the container and restart the service with `/command/s6-svc -r /run/service/openclaw`
-- **Networking** — By default (App Platform mode), gateway binds to `0.0.0.0:8080` and is exposed via App Platform's built-in HTTP routing. When ngrok or Tailscale is enabled, it falls back to `127.0.0.1:18789` (loopback). ngrok and Tailscale are mutually exclusive.
+- **Networking** — By default (App Platform mode), gateway binds to `0.0.0.0:8080` and is exposed via App Platform's built-in HTTP routing. When Tailscale is enabled, it binds to loopback and Tailscale serve handles external access.
 - **Config preservation** — If `openclaw.json` already exists at startup (e.g. restored from backup), `20-setup-openclaw` will not overwrite it. Delete the file to regenerate.
 - **See `CHEATSHEET.md`** for detailed command reference and troubleshooting

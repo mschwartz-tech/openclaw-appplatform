@@ -135,8 +135,6 @@ Update `app.yaml`:
 instance_size_slug: apps-s-1vcpu-2gb  # 1 CPU, 2GB
 
 envs:
-  - key: ENABLE_NGROK
-    value: "false"
   - key: TAILSCALE_ENABLE
     value: "true"
   - key: TS_AUTHKEY
@@ -317,7 +315,6 @@ openclaw message send --channel whatsapp --target "+1234567890" --message "Hello
 
 # Services
 /command/s6-svc -r /run/service/openclaw    # Restart
-/command/s6-svc -r /run/service/ngrok      # Restart ngrok
 
 # Logs
 tail -f /data/.openclaw/logs/gateway.log
@@ -347,7 +344,6 @@ See **[CHEATSHEET.md](CHEATSHEET.md)** for the complete reference.
 | `ENABLE_SPACES`      | `false` | Enable DO Spaces persistence |
 | `ENABLE_UI`          | `true`  | Enable web Control UI        |
 | `SSH_ENABLE`         | `false` | Enable SSH server            |
-| `ENABLE_NGROK`       | `false` | Enable ngrok tunnel (legacy) |
 
 ### Tailscale (when TAILSCALE_ENABLE=true)
 
@@ -413,7 +409,6 @@ exec my-daemon --foreground
 | Service     | Description                                              |
 |-------------|----------------------------------------------------------|
 | `openclaw`  | OpenClaw gateway                                         |
-| `ngrok`     | ngrok tunnel (if enabled)                                |
 | `tailscale` | Tailscale daemon (if enabled)                            |
 | `backup`    | Restic backup service - creates snapshots (if enabled)   |
 | `prune`     | Restic prune service - cleans old snapshots (if enabled) |

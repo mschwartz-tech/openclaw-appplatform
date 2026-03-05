@@ -21,13 +21,6 @@ persist_env_var OPENCLAW_ \
 [ -n "$OPENCLAW_STATE_DIR" ] && mkdir -p "$OPENCLAW_STATE_DIR"
 [ -n "$OPENCLAW_WORKSPACE_DIR" ] && mkdir -p "$OPENCLAW_WORKSPACE_DIR"
 
-# Validate mutual exclusivity of ngrok and tailscale
-if [ "${ENABLE_NGROK:-false}" = "true" ] && [ "${TAILSCALE_ENABLE:-false}" = "true" ]; then
-  echo "[generate-config] WARNING: Both ENABLE_NGROK and TAILSCALE_ENABLE are true."
-  echo "[generate-config] This doesn't make sense - ngrok is public, Tailscale is private."
-  echo "[generate-config] Defaulting to Tailscale (disable ENABLE_NGROK to silence this)."
-fi
-
 # Setup openclaw user's .profile (used by login shells, no interactive check)
 SOURCE_LINE="source /etc/s6-overlay/lib/env-utils.sh"
 PROFILE="/home/openclaw/.profile"
@@ -105,8 +98,8 @@ if [ "${ENABLE_UI:-true}" = "false" ]; then
 fi
 
 # Set gateway bind mode based on access layer
-if [ "${ENABLE_NGROK:-false}" = "true" ] || [ "${TAILSCALE_ENABLE:-false}" = "true" ]; then
-  echo "[generate-config] Tunnel enabled — binding to loopback"
+if [ "${TAILSCALE_ENABLE:-false}" = "true" ]; then
+  echo "[generate-config] Tailscale enabled — binding to loopback"
   jq '.gateway.bind = "loopback" | del(.gateway.port)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 else
   echo "[generate-config] App Platform mode — binding to 0.0.0.0:8080"

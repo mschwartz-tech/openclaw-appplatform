@@ -27,9 +27,6 @@ workers:
       # FEATURE FLAGS
       # Set to "true" to enable each feature, then fill in the config below
       # ============================================================
-      - key: ENABLE_NGROK
-        scope: RUN_TIME
-        value: "false"
       - key: TAILSCALE_ENABLE
         scope: RUN_TIME
         value: "false"
@@ -41,19 +38,9 @@ workers:
         value: "true"
 
       # ============================================================
-      # NGROK - Public Tunnel Access
-      # Set ENABLE_NGROK=true and provide your authtoken
-      # Get token: https://dashboard.ngrok.com/get-started/your-authtoken
-      # ============================================================
-      - key: NGROK_AUTHTOKEN
-        scope: RUN_TIME
-        type: SECRET
-
-      # ============================================================
       # TAILSCALE - Private Network Access
       # Set TAILSCALE_ENABLE=true and provide your auth key
       # Get key: https://login.tailscale.com/admin/settings/keys
-      # NOTE: Mutually exclusive with ngrok
       # ============================================================
       - key: TS_AUTHKEY
         scope: RUN_TIME

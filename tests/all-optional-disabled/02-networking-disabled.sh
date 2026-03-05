@@ -1,6 +1,6 @@
 #!/bin/bash
 # Test: Networking services disabled
-# Verifies Tailscale and ngrok are not running when disabled
+# Verifies Tailscale is not running when disabled
 
 set -e
 
@@ -15,9 +15,5 @@ docker exec "$CONTAINER" true || { echo "error: container not responsive"; exit 
 # Tailscale should NOT be running (process and service)
 assert_process_not_running "$CONTAINER" "tailscaled" || exit 1
 assert_service_down "$CONTAINER" "tailscale" || exit 1
-
-# ngrok should NOT be running (process and service)
-assert_process_not_running "$CONTAINER" "ngrok" || exit 1
-assert_service_down "$CONTAINER" "ngrok" || exit 1
 
 echo "Networking disabled tests passed"
