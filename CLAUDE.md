@@ -1,109 +1,70 @@
-# OpenClaw App Platform Deployment
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Overview
 
-This repository contains the Docker configuration and deployment templates for running [OpenClaw](https://github.com/openclaw/openclaw) on DigitalOcean App Platform with Tailscale networking.
+This repository contains the Docker configuration and deployment templates for running [OpenClaw](https://github.com/openclaw/openclaw) on DigitalOcean App Platform with Tailscale networking. It is not the OpenClaw application itself — it's the container packaging and infrastructure layer.
 
-## Quick Start
+## Commands
 
 ```bash
-cp .env.example .env           # Configure environment variables
-make rebuild                   # Build and start container
+# Local development
+cp .env.example .env           # Configure environment variables (first time)
+make rebuild                   # Build and start container (docker compose down + up --build)
 make logs                      # Follow container logs
 make shell                     # Shell into running container
+
+# Testing
+make test CONFIG=minimal       # Build, start, and test a specific config
+make test CONFIG=ssh-enabled   # Test SSH configuration
+make test-all                  # Run all configs in example_configs/
+
+# Inside the container
+/command/s6-svc -r /run/service/openclaw      # Restart OpenClaw service
+/command/s6-svc -r /run/service/<name>        # Restart any service (ngrok, tailscale, etc.)
+/command/s6-svstat /run/service/<name>        # Check service status
 ```
 
-## Key Files
+## Architecture
 
-- `Dockerfile` - Builds image with Ubuntu Noble, s6-overlay, Tailscale, Restic, Homebrew, pnpm, and openclaw
-- `app.yaml` - App Platform service configuration (for reference, uses worker for Tailscale)
-- `.do/deploy.template.yaml` - App Platform worker configuration (recommended)
-- `rootfs/etc/openclaw/openclaw.default.json` - Base gateway configuration template
-- `rootfs/etc/digitalocean/backup.yaml` - Restic backup configuration (paths, intervals, retention policy)
-- `tailscale` - Wrapper script to inject socket path for tailscale CLI
-- `rootfs/` - Overlay directory for custom files and s6 services
+**Container structure:** Ubuntu Noble base image with s6-overlay for process supervision. The entrypoint is `/init` (s6-overlay), which runs init scripts in order, then starts supervised services.
 
-## s6-overlay Init System
+**Boot sequence:**
+1. Init scripts (`rootfs/etc/cont-init.d/`) run in numeric order (00→99999)
+2. `20-setup-openclaw` builds `openclaw.json` from env vars and the default template (`rootfs/etc/openclaw/openclaw.default.json`)
+3. Services (`rootfs/etc/services.d/*/run`) start under s6 supervision
+4. Services that aren't enabled exit immediately (checked via env vars like `TAILSCALE_ENABLE`, `ENABLE_NGROK`, etc.)
 
-The container uses [s6-overlay](https://github.com/just-containers/s6-overlay) for process supervision:
+**Key runtime paths (inside container):**
+- `/data/.openclaw/openclaw.json` — generated gateway config (preserved across restarts if backup enabled)
+- `/data/.openclaw/` — all gateway state (sessions, agents, memory)
+- `/run/s6/container_environment/` — s6 environment variable store
+- `/etc/s6-overlay/lib/env-utils.sh` — shared shell library for env persistence (`persist_env_var`, `source_env_prefix`, `with_env_prefix`, `apply_permissions`)
 
-**Initialization scripts** (`rootfs/etc/cont-init.d/`):
-- `00-persist-env-vars` - Persists environment variables for s6
-- `00-setup-tailscale` - Configures Tailscale networking (if enabled)
-- `05-setup-restic` - Initializes Restic repository and exports environment variables
-- `06-restore-packages` - Restores dpkg package list from backup
-- `10-restore-state` - Restores application state from Restic snapshots
-- `11-reinstall-brews` - Reinstalls Homebrew packages from backup (if Homebrew installed)
-- `12-ssh-import-ids` - Imports SSH keys from GitHub (if GITHUB_USERNAME set)
-- `20-setup-openclaw` - Builds openclaw.json from environment variables
-- `99999-apply-permissions` - Applies final file permissions
+**Shared library (`rootfs/etc/s6-overlay/lib/env-utils.sh`):** All init scripts and service run scripts source this. It provides `persist_env_var` (write vars to s6 env store), `source_env_prefix` (load vars by prefix), `with_env_prefix` (exec with filtered env), and `apply_permissions` (apply ownership/mode from `permissions.yaml`).
 
-**Services** (`rootfs/etc/services.d/`):
-- `tailscale/` - Tailscale daemon (if TAILSCALE_ENABLE=true)
-- `openclaw/` - OpenClaw gateway
-- `ngrok/` - ngrok tunnel (if ENABLE_NGROK=true)
-- `sshd/` - SSH server (if SSH_ENABLE=true)
-- `backup/` - Periodic Restic backup service (if ENABLE_SPACES=true)
-- `prune/` - Periodic Restic snapshot cleanup (if ENABLE_SPACES=true)
-- `crond/` - Cron daemon for scheduled tasks
-
-Users can add custom init scripts (prefix with `30-` or higher) and custom services.
-
-## Networking
-
-Tailscale is required for networking. The gateway binds to `127.0.0.1:18789` and uses Tailscale serve mode to expose port 443 on your tailnet.
-
-Required environment variables:
-- `TS_AUTHKEY` - Tailscale auth key
-
-## Configuration
-
-All gateway settings are driven by the config file (`openclaw.json`). The init script dynamically builds the config based on environment variables:
-
-- Tailscale serve mode for networking
-- Gradient AI provider (if `GRADIENT_API_KEY` set)
-
-## Gradient AI Integration
-
-Set `GRADIENT_API_KEY` to enable DigitalOcean's serverless AI inference with models:
-- Llama 3.3 70B Instruct
-- Claude 4.5 Sonnet / Opus 4.5
-- DeepSeek R1 Distill Llama 70B
-
-## Persistence
-
-Optional DO Spaces backup via [Restic](https://restic.net/) when `ENABLE_SPACES=true`.
-
-**How it works:**
-
-- Incremental, encrypted snapshots to DigitalOcean Spaces (S3-compatible)
-- Backup runs every 30s; prune runs hourly
-- `10-restore-state` restores latest snapshots on container start
-
-**What gets backed up:** `/etc`, `/root`, `/data/.openclaw`, `/data/tailscale`, `/home`
-
-**Required env vars:** `RESTIC_SPACES_ACCESS_KEY_ID`, `RESTIC_SPACES_SECRET_ACCESS_KEY`, `RESTIC_SPACES_ENDPOINT`, `RESTIC_SPACES_BUCKET`, `RESTIC_PASSWORD`
-
-**Customizing:** Edit `rootfs/etc/digitalocean/backup.yaml` to change intervals, paths, excludes, or retention policy.
+**Config generation (`20-setup-openclaw`):** Copies the default JSON template to the state dir, then layers on jq transformations based on env vars (Tailscale serve mode, UI toggle, auth token). If a config already exists (e.g. restored from backup), it is preserved — delete it to regenerate from defaults.
 
 ## Testing
 
-See `tests/CLAUDE.md` for test system details. Run locally with `make rebuild` before pushing.
+Tests use a config-matrix approach. Each test configuration is an `.env` file in `example_configs/` with a matching test directory in `tests/<config-name>/`.
+
+**Test configs:** `minimal`, `ssh-enabled`, `ssh-and-ui`, `ui-disabled`, `all-optional-disabled`, `persistence-enabled`
+
+**Writing tests:**
+- Add `example_configs/<name>.env` with `STABLE_HOSTNAME=<name>`
+- Create executable `.sh` scripts in `tests/<name>/` with numeric prefixes for ordering
+- Scripts receive the container name as `$1`
+- Use helpers from `tests/lib.sh`: `wait_for_container`, `wait_for_service`, `assert_service_up`, `assert_service_down`, `assert_process_running`, `assert_process_not_running`
+
+**CI** (`.github/workflows/test.yml`): Build → Setup (per config) → Scenario (per script). Each test script runs as a separate CI job.
 
 ## Gotchas
 
-- **Use `openclaw` wrapper in console sessions** - The wrapper in `/usr/local/bin/openclaw` runs commands as the correct user with proper environment. Running the binary directly as root won't work.
-- **Service restarts**: Use `/command/s6-svc -r /run/service/<name>` to restart services (openclaw, ngrok, tailscale, etc.)
-- **s6 commands not in PATH**: Use full paths: `/command/s6-svok`, `/command/s6-svstat`, `/command/s6-svc`
-- **Checking service status**: `/command/s6-svok /run/service/<name>` returns 0 if supervised; `/command/s6-svstat /run/service/<name>` shows up/down state
-- **See CHEATSHEET.md** for detailed command reference and troubleshooting
-
-## Development
-
-Do not push code changes and then trigger a deployment when trying to develop. Make code changes inside the container and restart the OpenClaw service to iterate quickly:
-
-```bash
-make shell                                    # Enter container
-# Make your changes...
-/command/s6-svc -r /run/service/openclaw      # Restart service
-```
+- **Use `openclaw` wrapper in console sessions** — The wrapper in `/usr/local/bin/openclaw` runs commands as the correct user with proper environment. Running the binary directly as root won't work.
+- **s6 commands not in PATH** — Use full paths: `/command/s6-svc`, `/command/s6-svok`, `/command/s6-svstat`
+- **Don't push-to-deploy for development** — Make changes inside the container and restart the service with `/command/s6-svc -r /run/service/openclaw`
+- **Networking** — By default (App Platform mode), gateway binds to `0.0.0.0:8080` and is exposed via App Platform's built-in HTTP routing. When ngrok or Tailscale is enabled, it falls back to `127.0.0.1:18789` (loopback). ngrok and Tailscale are mutually exclusive.
+- **Config preservation** — If `openclaw.json` already exists at startup (e.g. restored from backup), `20-setup-openclaw` will not overwrite it. Delete the file to regenerate.
+- **See `CHEATSHEET.md`** for detailed command reference and troubleshooting

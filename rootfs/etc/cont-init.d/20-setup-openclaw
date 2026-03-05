@@ -104,6 +104,15 @@ if [ "${ENABLE_UI:-true}" = "false" ]; then
   jq '.gateway.controlUi.enabled = false' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 fi
 
+# Set gateway bind mode based on access layer
+if [ "${ENABLE_NGROK:-false}" = "true" ] || [ "${TAILSCALE_ENABLE:-false}" = "true" ]; then
+  echo "[generate-config] Tunnel enabled — binding to loopback"
+  jq '.gateway.bind = "loopback" | del(.gateway.port)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+else
+  echo "[generate-config] App Platform mode — binding to 0.0.0.0:8080"
+  jq '.gateway.bind = "all" | .gateway.port = 8080' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+fi
+
 # Add Tailscale config when enabled
 if [ "${TAILSCALE_ENABLE:-false}" = "true" ]; then
   echo "[generate-config] Adding Tailscale serve config"

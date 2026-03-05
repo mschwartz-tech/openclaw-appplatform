@@ -5,8 +5,9 @@
 spec:
   name: openclaw
   region: tor
-  workers:
+  services:
     - name: openclaw
+      http_port: 8080
       # Deploy from pre-built GHCR image (faster than building from source)
       image:
         registry_type: GHCR

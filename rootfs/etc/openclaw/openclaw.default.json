@@ -1,7 +1,8 @@
 {
     "gateway": {
         "mode": "local",
-        "bind": "loopback",
+        "bind": "all",
+        "port": 8080,
         "controlUi": {
             "allowInsecureAuth": true
         }

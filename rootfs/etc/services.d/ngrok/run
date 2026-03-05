@@ -20,3 +20,4 @@ ngrok config add-authtoken "$NGROK_AUTHTOKEN"
 
 echo "[ngrok] Starting tunnel to gateway port 18789..."
 with_env_prefix NGROK_ -- ngrok http 18789 --log stdout
+# Note: When ngrok is enabled, the init script overrides the default port back to 18789 (loopback bind)
