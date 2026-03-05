@@ -82,9 +82,14 @@ RUN set -eux; \
   tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz; \
   tar -C / -Jxpf /tmp/s6-overlay-arch.tar.xz; \
   rm /tmp/s6-overlay-*.tar.xz; \
-  # Install Chromium and browser dependencies
+  # Install Google Chrome (Ubuntu Noble's chromium is snap-only, doesn't work in Docker)
+  curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
+  | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg; \
+  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
+  > /etc/apt/sources.list.d/google-chrome.list; \
+  apt-get update; \
   apt-get install -y --no-install-recommends \
-  chromium \
+  google-chrome-stable \
   fonts-liberation \
   libasound2t64 \
   libatk-bridge2.0-0t64 \
