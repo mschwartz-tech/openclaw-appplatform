@@ -82,6 +82,23 @@ RUN set -eux; \
   tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz; \
   tar -C / -Jxpf /tmp/s6-overlay-arch.tar.xz; \
   rm /tmp/s6-overlay-*.tar.xz; \
+  # Install Chromium and browser dependencies
+  apt-get install -y --no-install-recommends \
+  chromium \
+  fonts-liberation \
+  libasound2t64 \
+  libatk-bridge2.0-0t64 \
+  libatk1.0-0t64 \
+  libcups2t64 \
+  libdbus-1-3 \
+  libdrm2 \
+  libgbm1 \
+  libgtk-3-0t64 \
+  libnss3 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxrandr2 \
+  xdg-utils; \
   # Setup SSH
   mkdir -p /run/sshd; \
   # Cleanup
@@ -99,7 +116,8 @@ RUN useradd -m -s /bin/bash openclaw \
   && mkdir -p "${OPENCLAW_STATE_DIR}" "${OPENCLAW_WORKSPACE_DIR}" \
   && ln -s ${OPENCLAW_STATE_DIR} /home/openclaw/.openclaw \
   && chown -R openclaw:openclaw /data \
-  && chown -R openclaw:openclaw /home/openclaw
+  && chown -R openclaw:openclaw /home/openclaw \
+  && echo 'openclaw ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/openclaw
 
 # Create pnpm directory (nvm/pnpm paths are set in openclaw user's .bashrc, not globally)
 RUN mkdir -p /home/openclaw/.local/share/pnpm && chown -R openclaw:openclaw /home/openclaw/.local
