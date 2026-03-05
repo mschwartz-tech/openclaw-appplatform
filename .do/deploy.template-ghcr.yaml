@@ -16,6 +16,11 @@ spec:
         tag: latest
       instance_count: 1
       instance_size_slug: apps-s-1vcpu-2gb # Minimum 2GB required - 1GB causes heap overflow
+      health_check:
+        initial_delay_seconds: 600
+        period_seconds: 10
+        timeout_seconds: 10
+        failure_threshold: 30
       envs:
         # Provide your Gradient inference key
         - key: GRADIENT_API_KEY

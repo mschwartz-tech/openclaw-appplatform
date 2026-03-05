@@ -8,6 +8,11 @@ services:
     http_port: 8080
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-2gb # Minimum 2GB required - 1GB causes heap overflow
+    health_check:
+      initial_delay_seconds: 600 # Init scripts restore ~364MB of state from backup
+      period_seconds: 10
+      timeout_seconds: 10
+      failure_threshold: 30
     github:
       branch: main
       deploy_on_push: true
