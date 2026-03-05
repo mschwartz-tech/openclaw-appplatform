@@ -6,14 +6,13 @@ Deploy [OpenClaw](https://github.com/openclaw/openclaw) - a multi-channel AI mes
 
 ## Quick Start: Choose Your Stage
 
-| Stage                   | What You Get            | Access Method        |
-|-------------------------|-------------------------|----------------------|
-| **1. CLI Only**         | Gateway + CLI           | `doctl apps console` |
-| **2. + Web UI + ngrok** | Control UI + Public URL | ngrok URL            |
-| **3. + Tailscale**      | Private Network         | Tailscale hostname   |
-| **+ Persistence**       | Data survives restarts  | DO Spaces            |
+| Stage                      | What You Get            | Access Method                    |
+|----------------------------|-------------------------|----------------------------------|
+| **1. App Platform Service**| Gateway + Web UI + URL  | Stable `*.ondigitalocean.app` URL|
+| **2. + Tailscale**         | Private Network         | Tailscale hostname               |
+| **+ Persistence**          | Data survives restarts  | DO Spaces                        |
 
-**Start simple, add features as needed.** Most users start with Stage 2 (ngrok) for the easiest setup.
+**Start simple, add features as needed.** Most users deploy as an App Platform service (Stage 1) for the easiest setup with a stable URL.
 
 ---
 
@@ -27,13 +26,13 @@ Deploy [OpenClaw](https://github.com/openclaw/openclaw) - a multi-channel AI mes
 │  └──────────────────────────────────────────────────────────────┘  │
 │  ┌─────────────┐  ┌───────────────────┐                            │
 │  │ Ubuntu      │  │ OpenClaw Gateway  │                            │
-│  │ Noble+Node  │  │ WebSocket :18789  │                            │
+│  │ Noble+Node  │  │ WebSocket :8080   │                            │
 │  │ + nvm       │  │ + Control UI      │                            │
 │  └─────────────┘  └───────────────────┘                            │
 │  ┌──────────────────────────────────────────────────────────────┐  │
-│  │ Access Layer (choose one):                                   │  │
-│  │  • Console only (default) - doctl apps console               │  │
-│  │  • ngrok (ENABLE_NGROK) - Public tunnel to UI                │  │
+│  │ Access Layer:                                                │  │
+│  │  • App Platform service (default) - stable *.ondigitalocean  │  │
+│  │    .app URL, no tunnel needed                                │  │
 │  │  • Tailscale (TAILSCALE_ENABLE) - Private network            │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │  ┌──────────────────────────────────────────────────────────────┐  │
@@ -51,9 +50,9 @@ Deploy [OpenClaw](https://github.com/openclaw/openclaw) - a multi-channel AI mes
 
 ---
 
-## Stage 1: CLI Only - The Basics
+## Stage 1: App Platform Service (Recommended)
 
-The simplest deployment. Access via `doctl apps console` and use CLI commands.
+Deploy as an App Platform **service** to get a stable public URL with no tunneling required. This is the recommended setup.
 
 ### Deploy
 
@@ -62,26 +61,45 @@ The simplest deployment. Access via `doctl apps console` and use CLI commands.
 git clone https://github.com/digitalocean-labs/openclaw-appplatform
 cd openclaw-appplatform
 
-# Edit app.yaml - set instance size for Stage 1
-# instance_size_slug: apps-s-1vcpu-2gb  # 1 CPU, 2GB (minimum for stable operation)
-
-# Set your OPENCLAW_GATEWAY_TOKEN in app.yaml or DO dashboard
-
-# Deploy
+# Deploy (creates the app with a stable URL)
 doctl apps create --spec app.yaml
 ```
 
-### Connect
+### Important: Deploying Code Changes
+
+When you push code changes, App Platform with `git` source may reuse a cached build. To force a fresh build from the latest commit:
 
 ```bash
-# Get app ID
+# Get your app ID
 doctl apps list
 
-# Open console
+# Force rebuild from latest commit
+doctl apps create-deployment <app-id> --force-rebuild
+```
+
+**Note:** Spec-only updates (`doctl apps update`) do NOT rebuild the image — they reuse the cached build. Always use `--force-rebuild` after pushing code changes.
+
+### Get Your URL
+
+After deployment, your app gets a stable URL:
+
+```
+https://openclaw-<name>-<hash>.ondigitalocean.app
+```
+
+Find it in the DigitalOcean dashboard under your app's overview page, or:
+
+```bash
+doctl apps list --format ID,DefaultIngress
+```
+
+### Connect via Console
+
+```bash
 doctl apps console <app-id> openclaw
 
 # Verify gateway is running
-openclaw gateway health --url ws://127.0.0.1:18789
+openclaw gateway health --url ws://127.0.0.1:8080
 
 # Check channel status
 openclaw channels status --probe
@@ -89,59 +107,16 @@ openclaw channels status --probe
 
 ### What's Included
 
-- ✅ OpenClaw gateway (WebSocket on port 18789)
+- ✅ OpenClaw gateway (HTTP on port 8080)
+- ✅ Web Control UI with stable public URL
 - ✅ CLI access via `openclaw` command
 - ✅ All channel plugins (WhatsApp, Telegram, Discord, etc.)
-- ❌ No web UI access (use CLI/TUI)
-- ❌ No public URL
-- ❌ Data lost on restart
+- ✅ HTTPS with auto-managed TLS certificate
+- ❌ Data lost on restart (add Spaces for persistence)
 
 ---
 
-## Stage 2: Add Web UI + ngrok
-
-Add a public URL to access the Control UI. **Recommended for getting started.**
-
-### Get ngrok Token
-
-1. Sign up at <https://dashboard.ngrok.com>
-2. Copy your authtoken from the dashboard
-
-### Deploy
-
-Update `app.yaml`:
-
-```yaml
-instance_size_slug: apps-s-1vcpu-2gb  # 1 CPU, 2GB
-
-envs:
-  - key: ENABLE_NGROK
-    value: "true"
-  - key: NGROK_AUTHTOKEN
-    type: SECRET
-    # Set value in DO dashboard
-```
-
-### Get Your URL
-
-```bash
-# In console
-curl -s http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url'
-```
-
-Or check the ngrok dashboard at <https://dashboard.ngrok.com/tunnels>
-
-### What's Added
-
-- ✅ Everything from Stage 1
-- ✅ Web Control UI
-- ✅ Public URL via ngrok
-- ❌ URL changes on restart (use Tailscale for stable URL)
-- ❌ Data lost on restart
-
----
-
-## Stage 3: Production with Tailscale
+## Stage 2: Production with Tailscale
 
 Private network access via your Tailscale tailnet. **Recommended for production.**
 
@@ -178,7 +153,7 @@ https://openclaw.<your-tailnet>.ts.net
 
 ### What's Added
 
-- ✅ Everything from Stage 1 & 2
+- ✅ Everything from Stage 1
 - ✅ Stable hostname on your tailnet
 - ✅ Private access (only your devices)
 - ✅ Production-grade security
@@ -330,7 +305,7 @@ The `openclaw` command is a wrapper that runs openclaw with the correct user and
 
 ```bash
 # Gateway
-openclaw gateway health --url ws://127.0.0.1:18789
+openclaw gateway health --url ws://127.0.0.1:8080
 openclaw gateway status
 
 # Channels
@@ -366,19 +341,13 @@ See **[CHEATSHEET.md](CHEATSHEET.md)** for the complete reference.
 
 ### Feature Flags
 
-| Variable           | Default | Description                  |
-|--------------------|---------|------------------------------|
-| `ENABLE_NGROK`     | `false` | Enable ngrok tunnel          |
-| `ENABLE_TAILSCALE` | `false` | Enable Tailscale             |
-| `ENABLE_SPACES`    | `false` | Enable DO Spaces persistence |
-| `ENABLE_UI`        | `true`  | Enable web Control UI        |
-| `SSH_ENABLE`       | `false` | Enable SSH server            |
-
-### ngrok (when ENABLE_NGROK=true)
-
-| Variable          | Description           |
-|-------------------|-----------------------|
-| `NGROK_AUTHTOKEN` | Your ngrok auth token |
+| Variable             | Default | Description                  |
+|----------------------|---------|------------------------------|
+| `TAILSCALE_ENABLE`   | `false` | Enable Tailscale             |
+| `ENABLE_SPACES`      | `false` | Enable DO Spaces persistence |
+| `ENABLE_UI`          | `true`  | Enable web Control UI        |
+| `SSH_ENABLE`         | `false` | Enable SSH server            |
+| `ENABLE_NGROK`       | `false` | Enable ngrok tunnel (legacy) |
 
 ### Tailscale (when TAILSCALE_ENABLE=true)
 

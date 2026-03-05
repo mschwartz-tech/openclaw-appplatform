@@ -29,7 +29,7 @@ motd                                         # Show system info (MOTD)
 ## Gateway Status
 
 ```bash
-openclaw gateway health --url ws://127.0.0.1:18789      # Check gateway is running
+openclaw gateway health --url ws://127.0.0.1:8080      # Check gateway is running
 openclaw gateway status                                  # Gateway info
 ```
 
@@ -122,12 +122,14 @@ env | grep ENABLE                                 # Feature flags
 
 ---
 
-## ngrok (when ENABLE_NGROK=true)
+## Deploying Code Changes
 
 ```bash
-curl -s http://127.0.0.1:4040/api/tunnels | jq .  # Get ngrok tunnel info
-curl -s http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+doctl apps list                                     # Get app ID
+doctl apps create-deployment <app-id> --force-rebuild  # Force rebuild from latest commit
 ```
+
+**Important:** Spec-only updates reuse cached builds. Always use `--force-rebuild` after pushing code changes.
 
 ---
 
@@ -138,7 +140,7 @@ curl -s http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url'
 motd
 
 # Full system check
-openclaw gateway health --url ws://127.0.0.1:18789 && \
+openclaw gateway health --url ws://127.0.0.1:8080 && \
 openclaw channels status --probe && \
 echo "--- Config ---" && \
 cat /data/.openclaw/openclaw.json | jq .
@@ -205,10 +207,10 @@ restic stats
 /command/s6-svc -r /run/service/openclaw
 
 # Check if gateway port is listening
-ss -tlnp | grep 18789
+ss -tlnp | grep 8080
 
 # Test gateway WebSocket
-curl -I http://127.0.0.1:18789
+curl -I http://127.0.0.1:8080
 
 # Re-run config generation
 /etc/cont-init.d/20-setup-openclaw
