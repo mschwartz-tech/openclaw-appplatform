@@ -1,7 +1,7 @@
 {
     "gateway": {
         "mode": "local",
-        "bind": "all",
+        "bind": "0.0.0.0",
         "port": 8080,
         "controlUi": {
             "allowInsecureAuth": true

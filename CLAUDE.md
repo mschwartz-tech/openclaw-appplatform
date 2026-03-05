@@ -65,6 +65,6 @@ Tests use a config-matrix approach. Each test configuration is an `.env` file in
 - **Use `openclaw` wrapper in console sessions** — The wrapper in `/usr/local/bin/openclaw` runs commands as the correct user with proper environment. Running the binary directly as root won't work.
 - **s6 commands not in PATH** — Use full paths: `/command/s6-svc`, `/command/s6-svok`, `/command/s6-svstat`
 - **Don't push-to-deploy for development** — Make changes inside the container and restart the service with `/command/s6-svc -r /run/service/openclaw`
-- **Networking** — By default (App Platform mode), gateway binds to `0.0.0.0:8080` and is exposed via App Platform's built-in HTTP routing. When Tailscale is enabled, it binds to loopback and Tailscale serve handles external access.
+- **Networking** — By default (App Platform mode), gateway binds to `0.0.0.0:8080` and is exposed via App Platform's built-in HTTP routing. When Tailscale is enabled, it binds to `127.0.0.1` and Tailscale serve handles external access. Note: OpenClaw expects IP addresses for `gateway.bind` (e.g. `"0.0.0.0"`, `"127.0.0.1"`), not symbolic names like `"all"` or `"loopback"`.
 - **Config preservation** — If `openclaw.json` already exists at startup (e.g. restored from backup), `20-setup-openclaw` will not overwrite it. Delete the file to regenerate.
 - **See `CHEATSHEET.md`** for detailed command reference and troubleshooting

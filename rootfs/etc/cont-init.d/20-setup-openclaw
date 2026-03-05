@@ -100,10 +100,10 @@ fi
 # Set gateway bind mode based on access layer
 if [ "${TAILSCALE_ENABLE:-false}" = "true" ]; then
   echo "[generate-config] Tailscale enabled — binding to loopback"
-  jq '.gateway.bind = "loopback" | del(.gateway.port)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+  jq '.gateway.bind = "127.0.0.1" | del(.gateway.port)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 else
   echo "[generate-config] App Platform mode — binding to 0.0.0.0:8080"
-  jq '.gateway.bind = "all" | .gateway.port = 8080' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+  jq '.gateway.bind = "0.0.0.0" | .gateway.port = 8080' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 fi
 
 # Add Tailscale config when enabled
