@@ -2,6 +2,9 @@ FROM tailscale/tailscale:stable AS tailscale
 
 FROM ubuntu:noble
 
+# Build cache bust: switch to App Platform native HTTP routing
+ARG CACHE_BUST=2026-03-05
+
 # Use bash for the shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
